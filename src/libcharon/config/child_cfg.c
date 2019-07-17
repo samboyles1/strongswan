@@ -172,6 +172,11 @@ struct private_child_cfg_t {
 	 * DS header field copy mode
 	 */
 	dscp_copy_t copy_dscp;
+
+	/**
+	 * Rekey policy for CHILD_SA
+	 */
+	rekey_t rekey_policy;
 };
 
 METHOD(child_cfg_t, get_name, char*,
@@ -500,6 +505,11 @@ METHOD(child_cfg_t, get_mode, ipsec_mode_t,
 	return this->mode;
 }
 
+METHOD (child_cfg_t, get_rekey_policy, rekey_t, private_child_cfg_t *this)
+{
+	return this->rekey_policy;
+}
+
 METHOD(child_cfg_t, get_start_action, action_t,
 	private_child_cfg_t *this)
 {
@@ -727,6 +737,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.destroy = _destroy,
 			.get_hw_offload = _get_hw_offload,
 			.get_copy_dscp = _get_copy_dscp,
+			.get_rekey_policy = _get_rekey_policy,
 		},
 		.name = strdup(name),
 		.options = data->options,
@@ -755,6 +766,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
 		.hw_offload = data->hw_offload,
 		.copy_dscp = data->copy_dscp,
+		.rekey_policy = data->rekey_policy,
 	);
 
 	return &this->public;

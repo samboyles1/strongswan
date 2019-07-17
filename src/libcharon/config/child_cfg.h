@@ -28,11 +28,24 @@ typedef enum action_t action_t;
 typedef enum child_cfg_option_t child_cfg_option_t;
 typedef struct child_cfg_t child_cfg_t;
 typedef struct child_cfg_create_t child_cfg_create_t;
+typedef enum rekey_t rekey_t;
 
 #include <library.h>
 #include <selectors/traffic_selector.h>
 #include <crypto/proposal/proposal.h>
 #include <kernel/kernel_ipsec.h>
+
+/**
+ * Policy to use when deciding whether or not to rekey a CHILD_SA
+ */
+enum rekey_t {
+	/** Always rekey this SA */
+	REKEY_ALWAYS,
+	/** Never rekey this SA */
+	REKEY_NEVER,
+	/** Rekey this SA only if it has been used since last rekey */
+	REKEY_ON_DEMAND,
+};
 
 /**
  * Action to take when connection is loaded, DPD is detected or
@@ -286,6 +299,13 @@ struct child_cfg_t {
 	void (*set_replay_window)(child_cfg_t *this, uint32_t window);
 
 	/**
+	 * Get the rekey policy of the CHILD_SA
+	 *
+	 * @return              rekey policy of SA
+	 */
+	rekey_t (*get_rekey_policy)(child_cfg_t *this);
+
+	/**
 	 * Check if an option flag is set.
 	 *
 	 * @param option		option flag to check
@@ -394,6 +414,8 @@ struct child_cfg_create_t {
 	hw_offload_t hw_offload;
 	/** How to handle the DS header field in tunnel mode */
 	dscp_copy_t copy_dscp;
+	/** The rekeying policy for the CHILD_SA */
+	rekey_t rekey_policy;
 };
 
 /**

@@ -445,6 +445,9 @@ METHOD(task_t, build_i, status_t,
 {
 	child_sa_t *child_sa;
 	entry_t *entry;
+	uint64_t bytes, packets;
+	child_cfg_t *child_cfg;
+	rekey_t policy;
 
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
 										  this->spi, TRUE);
@@ -489,13 +492,23 @@ METHOD(task_t, build_i, status_t,
 
 	if (!entry->rekeyed && this->expired)
 	{
-		child_cfg_t *child_cfg;
-
-		DBG1(DBG_IKE, "scheduling CHILD_SA recreate after hard expire");
 		child_cfg = child_sa->get_config(child_sa);
-		this->ike_sa->queue_task(this->ike_sa, (task_t*)
-				child_create_create(this->ike_sa, child_cfg->get_ref(child_cfg),
-									FALSE, NULL, NULL));
+		policy = child_cfg->get_rekey_policy(child_cfg);
+		child_sa->get_usestats(child_sa, false, NULL, &bytes, &packets);
+		/* If rekey policy is always, or on-demand and the SA has seen traffic */
+		if (policy == REKEY_ALWAYS ||
+		    (policy == REKEY_ON_DEMAND && (bytes != 0 || packets != 0)))
+		{
+			DBG1(DBG_IKE, "scheduling CHILD_SA recreate after hard expire");
+			this->ike_sa->queue_task(this->ike_sa, (task_t *)
+			                                        child_create_create(this->ike_sa,
+			                                        child_cfg->get_ref(child_cfg),
+			                                        FALSE, NULL, NULL));
+		}
+		else
+		{
+			DBG1(DBG_IKE, "Not scheduling CHILD_SA recreate after hard expire");
+		}
 	}
 	return NEED_MORE;
 }
