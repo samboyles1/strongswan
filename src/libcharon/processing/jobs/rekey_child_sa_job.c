@@ -57,9 +57,15 @@ METHOD(job_t, execute, job_requeue_t,
 	private_rekey_child_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
+	child_cfg_t *old_config;
+	child_sa_t *old_child_sa;
+	uint64_t packets, bytes;
+	rekey_t rekey_policy;
+	int rekey_sa = true;
 
 	ike_sa = charon->child_sa_manager->checkout(charon->child_sa_manager,
-									this->protocol, this->spi, this->dst, NULL);
+	                                            this->protocol, this->spi, this->dst, &old_child_sa);
+
 	if (ike_sa == NULL)
 	{
 		DBG1(DBG_JOB, "CHILD_SA %N/0x%08x/%H not found for rekey",
@@ -69,10 +75,38 @@ METHOD(job_t, execute, job_requeue_t,
 	{
 		if (ike_sa->get_state(ike_sa) != IKE_PASSIVE)
 		{
-			ike_sa->rekey_child_sa(ike_sa, this->protocol, this->spi);
+			old_child_sa->get_usestats(old_child_sa, false, NULL, &bytes, &packets);
+			old_config = old_child_sa->get_config(old_child_sa);
+			rekey_policy = old_config->get_rekey_policy(old_config);
+
+			if (rekey_policy == REKEY_ON_DEMAND)
+			{
+				if (bytes == 0 && packets == 0)
+				{
+					rekey_sa = false;
+				}
+			}
+			else if (rekey_policy == REKEY_NEVER)
+			{
+				rekey_sa = false;
+			}
+			else
+			{
+				rekey_sa = true;
+			}
+
+			if (!rekey_sa)
+			{
+				DBG1 (DBG_JOB, "CHILD_SA not rekeying due to rekey policy");
+			}
+			else
+			{
+				DBG1 (DBG_JOB, "CHILD_SA is rekeying now");
+				ike_sa->rekey_child_sa(ike_sa, this->protocol, this->spi);
+			}
 		}
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return JOB_REQUEUE_NONE;
 }
 

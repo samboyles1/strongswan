@@ -177,9 +177,18 @@ METHOD(task_t, build_i, status_t,
 		this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
 		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	}
-	this->ike_init->task.build(&this->ike_init->task, message);
 
-	return NEED_MORE;
+	/* if there are no children, destroy the old SA */
+	if (this->ike_sa->get_child_count(this->ike_sa) == 0)
+	{
+		DBG1(DBG_IKE, "no CHILD_SA found, not rekeying IKE_SA");
+		return SUCCESS;
+	}
+	else
+	{
+		this->ike_init->task.build(&this->ike_init->task, message);
+		return NEED_MORE;
+	}
 }
 
 /**
