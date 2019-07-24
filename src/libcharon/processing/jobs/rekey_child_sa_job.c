@@ -105,8 +105,8 @@ METHOD(job_t, execute, job_requeue_t,
 				ike_sa->rekey_child_sa(ike_sa, this->protocol, this->spi);
 			}
 		}
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return JOB_REQUEUE_NONE;
 }
 
